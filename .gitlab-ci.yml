@@ -1,0 +1,63 @@
+stages:
+  - build
+  - style_test
+  - integ_tests
+  - deploy
+  - notify
+
+build: #Part2
+  stage: build
+  script:
+    - cd src/cat
+    - make
+    - cd ../grep
+    - make 
+  artifacts:
+    paths:
+      - src/cat
+      - src/grep
+    expire_in: 30 days
+
+style_test: #Part3
+  stage: style_test
+  script:
+    - cd src
+    - sh style_test.sh
+
+integ_tests: #Part4
+  stage: integ_tests
+  needs: 
+    - [build] 
+    - [style_test]
+  script:
+    - cd src
+    - cp cat/s21_cat test/cat
+    - cp grep/s21_grep test/grep
+    - sh integ_tests.sh
+    - sh telegramm_script_CI.sh "SUCCESS"
+
+notify_ci:
+  stage: notify
+  when: on_failure
+  script:
+    - cd src/
+    - sh telegramm_script_CI.sh "FAILURE"
+
+deploy: #Part5,0
+  stage: deploy
+  needs:
+    - [build] 
+    - [style_test]
+    - [integ_tests]
+  script:
+    - cd src
+    - sh copy.sh
+    - sh telegramm_script_CD.sh "SUCCESS"
+  when: manual
+
+notify_cd:
+  stage: notify
+  when: on_failure
+  script:
+    - cd src/
+    - sh telegramm_script_CD.sh "FAILURE"
